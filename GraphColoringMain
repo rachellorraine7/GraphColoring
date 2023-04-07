@@ -1,0 +1,305 @@
+#include <iostream>
+#include <vector>
+#include <fstream>
+#include <string>
+#include <climits>
+using namespace std;
+
+
+int u = 0;
+
+void Print(vector<int>& v)
+{
+  for(int i = 0; i < v.size(); i++)
+    {
+      cout << v[i] << " ";
+    }
+  cout << endl;
+}
+
+int Most_Edges(const vector<vector<bool>>& graph)
+{
+  int max=0;
+  int vertex;
+  int count=0;
+  for(int i = 0; i < graph.size(); i++)
+    {
+      for(int j = 0; j < graph[i].size(); j++)
+        {
+          if(graph[i][j] == true) //if edge exists here
+            count++;
+        }
+      if(count > max)
+      {
+        max = count;
+        vertex = i;
+      }
+      count = 0;
+    }
+  return vertex;
+}
+
+int Smallest_Domain(vector<vector<int>>& domain, int& min, vector<int>& colors)
+{
+  min = INT_MAX;
+  int vertex = -1; //vertex that has smallest domain
+  for(int i = 0; i < domain.size(); i++)
+    {
+      if(domain[i][domain[i].size()-1] < min && colors[i] == -1) //check if doesn't have color
+        {
+          min = domain[i][domain[i].size()-1];
+          vertex = i;
+        }
+    }
+  return vertex;
+}
+
+bool Search(vector<int>& v, int color)
+{
+  bool found = false;
+  int i = 0;
+  while(found == false && i < v.size())
+    {
+      if(v[i] == color)
+        found = true;
+
+      i++;
+    }
+  return found;
+}
+
+//return which color reduces other domains the most
+int Which_Color(const vector<vector<bool>>& graph, vector<vector<int>>& domain, int k, int vertex, vector<int>& forbidden_colors)
+{
+   
+  
+  int color = -1;
+  int max_reduction = 0;
+  int count = 0;
+  int x = 0; //this will make sure we only do an if statement once
+  for(int i = 0; i < k; i++)
+    {
+      for(int j = 0; j < graph[vertex].size();j++){
+        if(x == 0 && domain[vertex][i] == 1 && Search(forbidden_colors, i) == false)
+        {
+          //first legal color
+          color = i;
+          x++;
+        }
+        //now if it reduces a domain
+        if(graph[vertex][j] == true && domain[vertex][i] == 1 && domain[j][i] == 1)
+          count++; 
+      }
+
+      if(count > max_reduction && Search(forbidden_colors, i) == false)
+        {
+          max_reduction = count;
+          color = i;
+        }
+      count = 0;
+      
+  
+
+  }
+  return color;
+  }
+
+void Reduce_Domain(const vector<vector<bool>>& graph, vector<vector<int>>& domain, int color, int vertex, vector<int>& v)
+{
+  int x; 
+  for(int j = 0; j < graph[vertex].size();j++){
+        if(graph[vertex][j] == true && domain[j][color] == 1 && j != vertex){
+          domain[j][color] = 0;
+        //reduce size of domain
+          x = domain[j][domain[j].size()-1];
+    domain[j][domain[j].size()-1] = x -1;
+          v.push_back(j); //keep track of which vertices' domains I changed
+      }
+    }
+
+}
+
+bool Base_Case(vector<int>& colors)
+{
+  bool answer = true;
+  int i = 0;
+  while(answer == true && i < colors.size())
+    {
+      if(colors[i]==-1)
+      {
+        answer = false;
+      }
+      i++;
+    }
+  return answer;
+  
+}
+
+//takes graph, domains, list of colors we chose, k, and vertex to start at
+bool Graph_Color_Constraint_Satisfaction(const vector<vector<bool>>& graph, vector<vector<int>>& domain, vector<int>& colors, int k, int start)
+{
+  
+//start by making a local variable for forbidden colors
+  //while loop so while pick color can still pick a color
+  //assign that color, check base case, reduce the domain
+  //make recursive call in loop then return true if it returns true
+  //if returns false, add that color to forbidden colors, reset domain, and do while loop again
+  //if you exit the while loop, you didnt return true so return false (the only place you return false)
+  // cout << start << endl;
+vector<int> forbidden_colors;
+while(Which_Color(graph, domain, k, start, forbidden_colors) != -1){
+  
+  //forbidden_colors are colors we tried and failed previously so not to pick same color in backtracking
+  int pick_color = Which_Color(graph, domain, k, start, forbidden_colors);
+  colors[start] = pick_color;
+  //just assigned a color, so let's check our base case
+  //base case: all vertices have a color
+  if(Base_Case(colors)==true)//we're done
+    return true;
+  //reduce domain
+  
+  vector<int> changed_domains = {};
+Reduce_Domain(graph, domain, pick_color, start, changed_domains);
+  //pick next starting vertex
+  int min = 0;//min will hold size of smallest domain
+  int next = Smallest_Domain(domain, min, colors);
+  bool next_works = Graph_Color_Constraint_Satisfaction(graph, domain, colors, k, next);
+  if(next_works == true)
+    return true;
+  else
+  {
+    
+    //fail, backtrack
+    //reset changed domains
+   
+   for(int i = 0; i < changed_domains.size(); i++)
+      {
+     
+          domain[changed_domains[i]][pick_color] = 1;
+          domain[changed_domains[i]][domain[i].size()-1] = domain[changed_domains[i]][domain[i].size()-1] + 1;
+      }
+    colors[start] = -1;
+    //add failed color to forbidden_colors
+   forbidden_colors.push_back(pick_color);
+    //try again, will go to start of loop and pick new color
+  
+  }
+    }
+
+  //if we made it here, we failed
+  return false;
+ 
+}
+
+int Graph_Color_Greedy(const vector<vector<bool>>& v, string name)
+{
+  vector<int> colors (v.size(), -1);
+  int color_count;
+  int max_color = 0;
+  colors[0] = 0;
+  for(int i = 1; i < v.size(); i++)
+    {
+      bool valid = false;
+      color_count = 0;
+      while(valid == false)
+        {
+          bool this_color_works = true;
+          for(int j = 0; j < i; j++)
+            {
+              if(v[i][j] == true && colors[j] == color_count)
+              {
+                this_color_works = false;
+              }  
+            }
+          if(this_color_works == true)
+            valid = true;
+          else
+            color_count++;
+        }
+      colors[i] = color_count;
+      if(color_count > max_color)
+        max_color = color_count;
+    }
+
+  return (max_color + 1);
+}
+
+int main() {
+  ifstream fin;
+  int vertices;
+  int edges;
+  vector<vector<bool>> graph;
+  int x;
+  int y;
+  
+  string fin_name;
+  cout << "Enter file name: ";
+  cin >> fin_name;
+  fin.open(fin_name.data());
+  fin >> vertices;
+  fin >> edges;
+  //resize graph to be vertices x vertices
+  graph.resize(vertices);
+  for(int i = 0; i < vertices; i++)
+    {
+      graph[i].resize(vertices);
+    }
+
+  while(fin >> x)//while there are items left to read
+    {
+      fin >> y;
+      graph[x][y] = true;
+      graph[y][x] = true;
+    }
+    fin.close();
+
+  
+  int greedy = Graph_Color_Greedy(graph, fin_name) ;
+  int k = greedy -1;
+  bool works = true;
+  while(works == true){
+      
+    
+   //try k colors now
+  vector<vector<int>> domain;
+  domain.resize(vertices);
+  for(int i = 0; i < vertices; i++)
+    {
+      domain[i].resize(greedy); 
+      //greedy-1 +1 for sum of domains at end
+    }
+  for(int i = 0; i< domain.size(); i++)
+    {
+      for(int j = 0; j<domain[i].size(); j++)
+        {
+          if(j == domain[i].size() - 1)
+            domain[i][j] = k;
+          else
+          domain[i][j] = 1;
+        }
+    }
+
+  vector<int> colors;
+  colors.resize(vertices, -1);
+  
+  
+  int start;
+  int max;
+
+  start = Most_Edges(graph);
+    vector<int> forbidden_colors = {};
+    works = Graph_Color_Constraint_Satisfaction(graph, domain, colors, k, start);
+  if(works == true)
+  {
+    cout << k << endl;
+    Print(colors);
+  }
+  else
+    cout << "fail";
+
+    k--;
+   }
+  
+  
+
+}
