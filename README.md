@@ -1,6 +1,7 @@
 # GraphColoring
-This problem asks, given a graph, how many colors are needed to color each vertex where no two adjacent vertices are the same color.
-
+<h2>
+  This problem asks, given a graph, how many colors are needed to color each vertex where no two adjacent vertices are the same color.
+</h2>
 
 This project takes in files where the first line has two numbers: the number of vertices in the graph and the number of edges in the graph. 
 It is then followed by sets of numbers describing the pairs of vertices connected by each edge.
